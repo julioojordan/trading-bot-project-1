@@ -2,8 +2,8 @@ const axios = require('axios');
 const { EMA } = require('technicalindicators');
 
 // TO DO ubah ini nanti Telegram
-const BOT_TOKEN = '8028906724:AAHxdHO3sYFf_f4um9p0xuUnPDoJJdJFF8E';
-const CHAT_ID = '7514018880';
+const BOT_TOKEN = '';
+const CHAT_ID = '';
 
 const sendTelegramMessage = async (message) => {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
