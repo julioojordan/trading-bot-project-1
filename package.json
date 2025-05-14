@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/julioojordan/trading-bot-project-1.git"
@@ -17,7 +18,7 @@
   },
   "homepage": "https://github.com/julioojordan/trading-bot-project-1#readme",
   "dependencies": {
-    "@binance/futures-connector": "^0.1.7",
+    "@binance/derivatives-trading-usds-futures": "^3.0.0",
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
     "exceljs": "^4.4.0",

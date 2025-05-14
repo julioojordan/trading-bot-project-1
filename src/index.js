@@ -1,5 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const winston = require("winston");
+const { UMFutures } = require("@binance/futures-connector");
+
 const app = express();
 const PORT = 3000;
 
@@ -35,12 +38,21 @@ const logger = winston.createLogger({
 
 logger.info("Starting server...");
 
+const client = new UMFutures(
+  process.env.BINANCE_API_KEY,
+  process.env.BINANCE_API_SECRET,
+  {
+    // baseURL: "https://fapi.binance.com", // Untuk live trading
+    baseURL: "https://testnet.binancefuture.com", // ← Gunakan ini untuk testnet
+  }
+);
+
 // === Trading Loop Function ===
 const tradingLoop = async () => {
   logger.info("🔁 Memulai trading loop (async)...");
   while (isRunning) {
     try {
-      const positionData = await safeCall(client.getPositionRisk, [{ symbol }]);
+      const positionData = await safeCall(client.getPositionRisk, [symbol]);
       const positionAmt =
         positionData && positionData.length > 0
           ? parseFloat(positionData[0].positionAmt)
