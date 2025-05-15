@@ -1,7 +1,7 @@
 const ExcelJS = require("exceljs");
 const fs = require("fs");
 
-const logFile = "../tradeLog/trade_log.xlsx";
+const logFile = "../trading-bot-project-1/src/tradeLog/trade_log.xlsx";
 
 const logColumns = [
   "Timestamp",
@@ -25,7 +25,7 @@ const initializeLogFile = async () => {
 };
 
 // ✅ Fungsi log trade ke Excel
-const logTradeToExcel = async (
+const logTradeToExcel2 = async (
   timestamp,
   signal,
   entryPrice,
@@ -62,5 +62,5 @@ const logTradeToExcel = async (
 
 module.exports = {
   initializeLogFile,
-  logTradeToExcel,
+  logTradeToExcel2,
 };

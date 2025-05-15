@@ -1,17 +1,17 @@
 const { DateTime } = require("luxon");
 const { sendTelegramMessage } = require("../utils/utils");
-const { logTradeToExcel } = require("../utils/logTradeToExcel2");
+const { logTradeToExcel2 } = require("../utils");
 
 const openNewPosition = async (
   symbol,
   side,
   client,
-  fixedQtyUSDT, // ini dapet dari env aja kah ?
+  fixedQtyUSDT, // TODO ini dapet dari env aja kah ?
   riskPercent,
   rewardRiskRatio
 ) => {
   try {
-    const ticker = await client.getSymbolPriceTicker({ symbol });
+    const ticker = await client.restAPI.symbolPriceTickerV2(symbol);
     const entryPrice = ticker?.price ? parseFloat(ticker.price) : 0.0;
     const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss");
 
@@ -32,34 +32,46 @@ const openNewPosition = async (
       side === "BUY" ? entryPrice - riskAmount : entryPrice + riskAmount;
 
     // 🟢 Market Entry
-    await client.submitNewOrder({
-      symbol,
-      side,
-      type: "MARKET",
-      quantity: qty,
-    });
+    await client.restAPI.newOrder(
+      symbol,               // symbol
+      side,                 // side (BUY / SELL)
+      "MARKET",             // type
+      "BOTH",               // positionSide (use "LONG"/"SHORT" if in hedge mode)
+      undefined,            // timeInForce (not needed for MARKET)
+      qty                   // quantity
+    );
 
     const oppositeSide = side === "BUY" ? "SELL" : "BUY";
 
-    // 🎯 Take Profit
-    await client.submitNewOrder({
+    // 🎯 Take Profit Order
+    await client.restAPI.newOrder(
       symbol,
-      side: oppositeSide,
-      type: "TAKE_PROFIT_MARKET",
-      stopPrice: tpPrice.toFixed(2),
-      closePosition: true,
-      timeInForce: "GTC",
-    });
+      oppositeSide,
+      "TAKE_PROFIT_MARKET",
+      "BOTH",
+      "GTC",                     // timeInForce
+      undefined,                 // quantity (closePosition = true → must be undefined)
+      undefined,
+      undefined,
+      undefined,
+      tpPrice.toFixed(2),        // stopPrice
+      "true"                     // closePosition
+    );
 
-    // 🛑 Stop Loss
-    await client.submitNewOrder({
+    // 🛑 Stop Loss Order
+    await client.restAPI.newOrder(
       symbol,
-      side: oppositeSide,
-      type: "STOP_MARKET",
-      stopPrice: slPrice.toFixed(2),
-      closePosition: true,
-      timeInForce: "GTC",
-    });
+      oppositeSide,
+      "STOP_MARKET",
+      "BOTH",
+      "GTC",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      slPrice.toFixed(2),
+      "true"
+    );
 
     // 📤 Kirim Telegram
     const message = `🔔 <b>NEW ${side} POSITION</b> ${symbol}\nEntry: ${entryPrice}\nTime: ${timestamp}\nQty: ${qty} BTC\nSL: ${slPrice.toFixed(
@@ -72,7 +84,7 @@ const openNewPosition = async (
     );
 
     // 📝 Log ke Excel/Sheets
-    await logTradeToExcel(
+    await logTradeToExcel2(
       timestamp,
       `ENTRY ${side}`,
       entryPrice,

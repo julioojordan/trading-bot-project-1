@@ -1,20 +1,12 @@
 const axios = require("axios");
 const dayjs = require("dayjs");
 const { logTradeToExcel, logInfoToExcel } = require("./logTradeToExcel");
+const { safeCall } = require("../utils")
 
 const fixedQtyUSDT = 50; // ubah sesuai nilai kamu
 const TELEGRAM_BOT_TOKEN = "your_bot_token";
 const TELEGRAM_CHAT_ID = "your_chat_id";
 
-// Fungsi bantu untuk panggil async API dan handle error
-const safeCall = async (fn) => {
-  try {
-    return await fn();
-  } catch (err) {
-    console.error("Safe call error:", err.message);
-    return null;
-  }
-}
 
 // Kirim pesan Telegram
 const sendTelegramMessage = async (message) => {
@@ -38,14 +30,14 @@ const detectManualOrAutoExit = async (
   entryPrice,
   client
 ) => {
-  const positionInfo = await safeCall(() => client.getPositionRisk({ symbol }));
+  const positionInfo = await safeCall(() => client.restAPI.positionInformationV3(symbol));
   if (positionInfo && positionInfo.length > 0) {
     const positionAmt = parseFloat(positionInfo[0].positionAmt);
     if (Math.abs(positionAmt) < 0.0001 && entryPrice != null) {
       const timestamp = dayjs().format("YYYY-MM-DD HH:mm:ss");
 
       const ticker = await safeCall(() =>
-        client.getSymbolPriceTicker({ symbol })
+        client.restAPI.symbolPriceTickerV2(symbol)
       );
       const exitPrice =
         ticker && ticker.price ? parseFloat(ticker.price) : null;

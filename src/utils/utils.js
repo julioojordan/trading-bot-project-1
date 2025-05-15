@@ -35,7 +35,7 @@ const safeCall = async (fn, args = [], retries = 3, delay = 2000) => {
 
 // Calculate quantity based on USDT value and leverage
 const calculateQty = async (client, symbol, usdtValue, leverage) => {
-  const ticker = await safeCall(() => client.getSymbolPriceTicker({ symbol }));
+  const ticker = await safeCall(() => client.restAPI.symbolPriceTickerV2(symbol));
   const price = ticker && ticker.price ? parseFloat(ticker.price) : 1;
   const qty = (usdtValue * leverage) / price;
   return Number(qty.toFixed(3));
@@ -43,12 +43,12 @@ const calculateQty = async (client, symbol, usdtValue, leverage) => {
 
 // Set leverage for a given symbol
 const setLeverage = async (client, symbol, leverage) => {
-  return await safeCall(() => client.changeLeverage({ symbol, leverage }));
+  return await safeCall(() => client.restAPI.changeInitialLeverage(symbol, leverage));
 }
 
 // Get EMA crossing using historical klines
 const getEmaCrossing = async (client, symbol = 'BTCUSDT', interval = '1m', limit = 100) => {
-  const klines = await safeCall(() => client.getKlines({ symbol, interval, limit }));
+  const klines = await safeCall(() => client.restAPI.klineCandlestickData(symbol, interval, undefined, undefined, limit));
   if (!klines || klines.length === 0) return null;
 
   const closes = klines.map(k => parseFloat(k[4]));
