@@ -16,8 +16,9 @@ const tradingLoop = async (
   logger.info("🔁 Memulai trading loop (async)...");
   while (global.isRunning) {
     try {
-      const positionData = await safeCall(() =>
-        client.restAPI.positionInformationV2(symbol)
+      const positionData = await safeCall(
+        () => client.restAPI.positionInformationV2(symbol),
+        logger
       );
       const positionAmt =
         positionData && positionData.length > 0
@@ -27,7 +28,8 @@ const tradingLoop = async (
       if (inPosition && positionAmt === 0) {
         logger.info("🏁 Posisi tertutup (TP/SL/Manual/Reverse). Reset bot.");
         sendTelegramMessage(
-          "🏁 Posisi keluar otomatis (TP/SL), manual, atau karena sinyal berlawanan."
+          "🏁 Posisi keluar otomatis (TP/SL), manual, atau karena sinyal berlawanan.",
+          logger
         );
         logTradeToExcel(
           new Date().toISOString().replace("T", " ").slice(0, 19),
@@ -40,7 +42,8 @@ const tradingLoop = async (
         );
 
         await safeCall(
-          () => client.restAPI.cancelAllOpenOrders(symbol)
+          () => client.restAPI.cancelAllOpenOrders(symbol),
+          logger
         );
 
         inPosition = false;
@@ -51,17 +54,26 @@ const tradingLoop = async (
       [lastPosition, entryPrice] = await detectManualOrAutoExit(
         symbol,
         lastPosition,
-        entryPrice
+        entryPrice,
+        client,
+        logger
       );
 
       if (lastPosition === "WAIT") {
-        [lastPosition, entryPrice] = await checkAndTrade(symbol, lastPosition);
-      } else {
-        [lastPosition, entryPrice] = await checkExitAndTrade(
+        [lastPosition, entryPrice] = await checkAndTrade({
+          client,
+          logger,
           symbol,
           lastPosition,
-          entryPrice
-        );
+        });
+      } else {
+        [lastPosition, entryPrice] = await checkExitAndTrade({
+          symbol,
+          lastPosition,
+          entryPrice,
+          client,
+          logger,
+        });
       }
 
       await sleep(3000);

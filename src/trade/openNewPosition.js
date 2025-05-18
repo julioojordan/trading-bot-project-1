@@ -2,21 +2,22 @@ const { DateTime } = require("luxon");
 const { sendTelegramMessage } = require("../utils/utils");
 const { logTradeToExcel2 } = require("../utils");
 
-const openNewPosition = async (
+const openNewPosition = async ({
   symbol,
   side,
   client,
-  fixedQtyUSDT, // TODO ini dapet dari env aja kah ?
+  fixedQtyUSDT,
   riskPercent,
-  rewardRiskRatio
-) => {
+  rewardRiskRatio,
+  logger,
+}) => {
   try {
     const ticker = await client.restAPI.symbolPriceTickerV2(symbol);
     const entryPrice = ticker?.price ? parseFloat(ticker.price) : 0.0;
     const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss");
 
     if (entryPrice === 0) {
-      console.warn("⚠️ Invalid price, aborting order.");
+      logger?.warn("⚠️ Invalid price, aborting order.");
       return null;
     }
 
@@ -33,12 +34,12 @@ const openNewPosition = async (
 
     // 🟢 Market Entry
     await client.restAPI.newOrder(
-      symbol,               // symbol
-      side,                 // side (BUY / SELL)
-      "MARKET",             // type
-      "BOTH",               // positionSide (use "LONG"/"SHORT" if in hedge mode)
-      undefined,            // timeInForce (not needed for MARKET)
-      qty                   // quantity
+      symbol,
+      side,
+      "MARKET",
+      "BOTH",
+      undefined,
+      qty
     );
 
     const oppositeSide = side === "BUY" ? "SELL" : "BUY";
@@ -49,13 +50,13 @@ const openNewPosition = async (
       oppositeSide,
       "TAKE_PROFIT_MARKET",
       "BOTH",
-      "GTC",                     // timeInForce
-      undefined,                 // quantity (closePosition = true → must be undefined)
+      "GTC",
       undefined,
       undefined,
       undefined,
-      tpPrice.toFixed(2),        // stopPrice
-      "true"                     // closePosition
+      undefined,
+      tpPrice.toFixed(2),
+      "true"
     );
 
     // 🛑 Stop Loss Order
@@ -77,9 +78,9 @@ const openNewPosition = async (
     const message = `🔔 <b>NEW ${side} POSITION</b> ${symbol}\nEntry: ${entryPrice}\nTime: ${timestamp}\nQty: ${qty} BTC\nSL: ${slPrice.toFixed(
       2
     )} | TP: ${tpPrice.toFixed(2)}`;
-    await sendTelegramMessage(message);
+    await sendTelegramMessage(message, logger);
 
-    console.log(
+    logger?.info(
       `🟢 ENTRY EXECUTED: ${side} | ${symbol} | Price: ${entryPrice} | Time: ${timestamp}`
     );
 
@@ -96,7 +97,7 @@ const openNewPosition = async (
 
     return entryPrice;
   } catch (err) {
-    console.error("❗ Error in openNewPosition:", err.message || err);
+    logger?.error("❗ Error in openNewPosition:", err.message || err);
     return null;
   }
 };

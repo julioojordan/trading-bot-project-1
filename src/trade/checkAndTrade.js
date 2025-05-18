@@ -1,9 +1,8 @@
-const technicalIndicators = require("technicalindicators");
-const { openNewPosition } = require
+const { openNewPosition } = require("../trade");
+const { getEmaCrossing } = require("../utils");
 
-// Misal: getEmaCrossing dan openNewPosition sudah didefinisikan async function di tempat lain
-const checkAndTrade = async (symbol, lastPosition) => {
-  const df = await getEmaCrossing(symbol);
+const checkAndTrade = async ({ client, logger, symbol, lastPosition }) => {
+  const df = await getEmaCrossing({ client, symbol, logger });
   if (!df || df.length < 2) {
     return [lastPosition, null];
   }
@@ -17,21 +16,22 @@ const checkAndTrade = async (symbol, lastPosition) => {
   const crossedUp = ema12_prev < ema21_prev && ema12_now > ema21_now;
   const crossedDown = ema12_prev > ema21_prev && ema12_now < ema21_now;
 
-  console.log(
+  logger.info(
     `📊 EMA Check: EMA12_prev=${ema12_prev.toFixed(
       2
     )}, EMA21_prev=${ema21_prev.toFixed(2)}, EMA12_now=${ema12_now.toFixed(
       2
     )}, EMA21_now=${ema21_now.toFixed(2)}`
   );
-  console.log("🔎 Crossing:", crossedUp ? "UP" : crossedDown ? "DOWN" : "NONE");
+  const crossing = crossedUp ? "UP" : crossedDown ? "DOWN" : "NONE";
+  logger.info(`🔎 Crossing: ${crossing}`);
 
   if (lastPosition === "WAIT") {
     if (crossedUp) {
-      const result = await openNewPosition(symbol, "BUY");
+      const result = await openNewPosition({ symbol, side: "BUY", client, logger });
       return ["LONG", result];
     } else if (crossedDown) {
-      const result = await openNewPosition(symbol, "SELL");
+      const result = await openNewPosition({ symbol, side: "SELL", client, logger });
       return ["SHORT", result];
     }
   }

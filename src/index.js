@@ -3,11 +3,11 @@ const express = require("express");
 const winston = require("winston");
 
 // === Import fungsi utilitas dan trading ===
-const { initializeLogFile } = require("./utils/logTradeToExcel2");
+const { initializeLogFile, logger } = require("./utils");
 const { createClient } = require("./client/futureConnector");
 const { tradingLoop } = require("./tradingLoop");
 
-const startServer = async () => {
+const startServer = async (logger) => {
   // === Bot State ===
   global.isRunning = false;
 
@@ -21,18 +21,6 @@ const startServer = async () => {
   // === EXPRESS ===
   const app = express();
   const PORT = 3000;
-
-  // === Setup Logger ===
-  const logger = winston.createLogger({
-    level: "info",
-    format: winston.format.combine(
-      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-      winston.format.printf(({ timestamp, level, message }) => {
-        return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
-      })
-    ),
-    transports: [new winston.transports.Console()],
-  });
 
   logger.info("Starting futures client...");
   const client = await createClient(logger);
@@ -88,4 +76,4 @@ const startServer = async () => {
   });
 };
 
-startServer();
+startServer(logger);

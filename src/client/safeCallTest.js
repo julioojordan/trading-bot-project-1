@@ -1,5 +1,5 @@
 
-const { safeCall } = require("../utils")
+const { safeCall, logger } = require("../utils")
 let count = 0;
 
 const flakyCall = async () => {
@@ -13,7 +13,7 @@ const flakyCall = async () => {
 };
 
 const test2 = async () => {
-  const result = await safeCall(flakyCall);
+  const result = await safeCall(flakyCall, logger);
   console.log("✅ Hasil:", result);
 };
 

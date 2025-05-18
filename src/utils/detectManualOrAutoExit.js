@@ -1,44 +1,34 @@
 const axios = require("axios");
 const dayjs = require("dayjs");
 const { logTradeToExcel, logInfoToExcel } = require("./logTradeToExcel");
-const { safeCall } = require("../utils")
+const { safeCall, sendTelegramMessage } = require("./utils");
 
-const fixedQtyUSDT = 50; // ubah sesuai nilai kamu
-const TELEGRAM_BOT_TOKEN = "your_bot_token";
-const TELEGRAM_CHAT_ID = "your_chat_id";
-
-
-// Kirim pesan Telegram
-const sendTelegramMessage = async (message) => {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  try {
-    await axios.post(url, {
-      chat_id: TELEGRAM_CHAT_ID,
-      text: message,
-      parse_mode: "Markdown",
-    });
-  } catch (err) {
-    console.error("Telegram send error:", err.message);
-  }
-}
+const fixedQtyUSDT = 50; // ubah sesuai kebutuhan
 
 // Fungsi utama
-// TO DO client diisi ke binance connector nanti ya
 const detectManualOrAutoExit = async (
   symbol,
   lastPosition,
   entryPrice,
-  client
+  client,
+  logger
 ) => {
-  const positionInfo = await safeCall(() => client.restAPI.positionInformationV3(symbol));
+  const positionInfo = await safeCall(
+    () => client.restAPI.positionInformationV3(symbol),
+    logger
+  );
+
   if (positionInfo && positionInfo.length > 0) {
     const positionAmt = parseFloat(positionInfo[0].positionAmt);
+
     if (Math.abs(positionAmt) < 0.0001 && entryPrice != null) {
       const timestamp = dayjs().format("YYYY-MM-DD HH:mm:ss");
 
-      const ticker = await safeCall(() =>
-        client.restAPI.symbolPriceTickerV2(symbol)
+      const ticker = await safeCall(
+        () => client.restAPI.symbolPriceTickerV2(symbol),
+        logger
       );
+
       const exitPrice =
         ticker && ticker.price ? parseFloat(ticker.price) : null;
 
@@ -66,10 +56,10 @@ const detectManualOrAutoExit = async (
       }%
         Time: ${timestamp}`;
 
-      console.log("📤 Telegram:", message);
-      console.log("📝 Logging to Excel and console...");
+      logger?.info(`📤 Telegram: ${message}`);
+      logger?.info("📝 Logging to Excel and system...");
 
-      await sendTelegramMessage(message);
+      await sendTelegramMessage(message, logger);
       await logTradeToExcel(
         timestamp,
         `${exitType} ${lastPosition}`,
@@ -81,12 +71,12 @@ const detectManualOrAutoExit = async (
       );
       await logInfoToExcel(timestamp, message);
 
-      console.log(`✅ ${exitType} processed and logged at ${timestamp}`);
+      logger?.info(`✅ ${exitType} processed and logged at ${timestamp}`);
       return ["WAIT", null];
     }
   }
 
   return [lastPosition, entryPrice];
-}
+};
 
 module.exports = { detectManualOrAutoExit };

@@ -6,9 +6,16 @@ const {
 } = require("../utils");
 const { DateTime } = require("luxon");
 
-const exitPosition = async (client, symbol, lastPosition, entryPrice) => {
-  const accountInfo = await safeCall(() =>
-    client.restAPI.accountInformationV3()
+const exitPosition = async ({
+  client,
+  symbol,
+  lastPosition,
+  entryPrice,
+  logger,
+}) => {
+  const accountInfo = await safeCall(
+    () => client.restAPI.accountInformationV3(),
+    logger
   );
   const positions = accountInfo?.positions || [];
 
@@ -19,10 +26,11 @@ const exitPosition = async (client, symbol, lastPosition, entryPrice) => {
   if (qty <= 0) return;
 
   const sideToExit = parseFloat(pos.positionAmt) < 0 ? "BUY" : "SELL";
-  const ticker = await safeCall(() =>
-    client.restAPI.symbolPriceTickerV2(symbol)
+  const ticker = await safeCall(
+    () => client.restAPI.symbolPriceTickerV2(symbol),
+    logger
   );
-  console.log("📦 Ticker result at exit:", ticker);
+  logger?.info("📦 Ticker result at exit:", ticker);
 
   const exitPrice = ticker?.price ? parseFloat(ticker.price) : 0.0;
   const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss");
@@ -36,18 +44,20 @@ const exitPosition = async (client, symbol, lastPosition, entryPrice) => {
   const roi = modalUSDT !== 0 ? (pnlUSDT / modalUSDT) * 100 : 0;
 
   // Eksekusi order market untuk keluar posisi
-  await safeCall(() =>
-    client.restAPI.newOrder(
-      symbol, // symbol 
-      sideToExit, // side (BUY / SELL)
-      "MARKET", // type
-      "BOTH", // positionSide ("LONG"/"SHORT" jika pakai hedge mode)
-      undefined, // timeInForce (MARKET order tidak perlu)
-      qty // quantity
-    )
+  await safeCall(
+    () =>
+      client.restAPI.newOrder(
+        symbol, // symbol
+        sideToExit, // side (BUY / SELL)
+        "MARKET", // type
+        "BOTH", // positionSide ("LONG"/"SHORT" jika pakai hedge mode)
+        undefined, // timeInForce (MARKET order tidak perlu)
+        qty // quantity
+      ),
+    logger
   );
 
-  console.log(
+  logger?.info(
     `🔴 EXIT EXECUTED: ${sideToExit} | ${symbol} | Exit Price: ${exitPrice} | Time: ${timestamp}`
   );
 
@@ -67,9 +77,9 @@ const exitPosition = async (client, symbol, lastPosition, entryPrice) => {
   const message = `❌ <b>EXIT ${lastPosition}</b> ${symbol}\nExit: ${exitPrice}\nTime: ${timestamp}\nROI: ${roi.toFixed(
     2
   )}% | PnL: $${pnlUSDT.toFixed(2)} | Modal: $${modalUSDT.toFixed(2)}`;
-  await sendTelegramMessage(message);
+  await sendTelegramMessage(message, logger);
 };
 
-module.export = {
+module.exports = {
   exitPosition,
 };
